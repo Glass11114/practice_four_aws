@@ -1,192 +1,252 @@
 
-# Práctica 3: Limpieza de Datos Avanzada en Python
+# Práctica 4: Generación de Datos Sintéticos y Partición Estratificada
 
-Implementación de un proceso de preparación y limpieza de datos utilizando **Python**, el método del **rango intercuartílico (IQR)** y el algoritmo **K-Nearest Neighbors (KNN)** para detectar valores atípicos y estimar valores faltantes.
+Implementación de un proceso de **generación de datos sintéticos de clientes mexicanos** utilizando Python y Faker, seguido de una partición de entrenamiento y prueba mediante `train_test_split` con estratificación.
+
+El proyecto permite analizar cómo conservar la distribución de una variable objetivo (`churn`) al dividir un conjunto de datos para tareas de aprendizaje automático.
 
 ## 1. Objetivo
 
-Desarrollar un proceso de limpieza de datos que permita:
+Generar un conjunto de 1,000 registros sintéticos utilizando Faker y NumPy, dividirlo en conjuntos de entrenamiento y prueba con una proporción 80/20, y verificar que la estratificación conserve aproximadamente la distribución de la variable objetivo.
 
-- Identificar valores faltantes en un conjunto de datos.
-- Detectar valores atípicos mediante el método IQR.
-- Sustituir temporalmente los valores atípicos por `NaN`.
-- Aplicar imputación mediante `KNNImputer`.
-- Comparar los resultados de KNN con los métodos de media y mediana.
-- Evaluar diferentes valores de `k`.
-- Generar gráficos comparativos antes y después de la limpieza.
+Los objetivos específicos son:
+
+- Generar información ficticia con localización `es_MX`.
+- Utilizar semillas aleatorias para obtener resultados reproducibles.
+- Incorporar campos adicionales de teléfono y dirección.
+- Crear una variable objetivo binaria denominada `churn`.
+- Separar las características predictoras (`X`) de la variable objetivo (`y`).
+- Aplicar una partición estratificada de entrenamiento y prueba.
+- Codificar variables categóricas mediante One-Hot Encoding.
+- Comparar las proporciones de `churn` entre los conjuntos.
+- Exportar los resultados a archivos CSV.
 
 ## 2. Tecnologías utilizadas
 
 | Tecnología | Función |
 |---|---|
-| Python | Lenguaje de programación |
-| Pandas | Manipulación y análisis de datos |
-| NumPy | Operaciones numéricas y valores `NaN` |
-| Scikit-learn | Imputación KNN y estandarización |
-| SciPy | Biblioteca científica incluida en el entorno |
-| Matplotlib | Generación de gráficos |
-| PyYAML | Lectura de la configuración |
-| AWS EC2 | Entorno de ejecución Ubuntu |
-| Git y GitHub | Control de versiones |
+| Python | Desarrollo del proceso |
+| Faker | Generación de datos ficticios mexicanos |
+| Pandas | Creación y manipulación de DataFrames |
+| NumPy | Generación de valores y probabilidades |
+| Scikit-learn | División estratificada Train-Test |
+| PyYAML | Lectura de parámetros de configuración |
+| AWS EC2 | Ejecución del programa en Ubuntu |
+| Git y GitHub | Control de versiones y publicación |
 
 ## 3. Estructura del proyecto
 
 ```text
-practica3/
-├── practica3.py
+practica4/
+├── practica4.py
 ├── config.example.yaml
 ├── requirements.txt
 ├── README.md
 ├── .gitignore
-└── graficos/
-    ├── comparacion_edad.png
-    └── comparacion_ingreso_mensual.png
+└── resultados/
+    ├── dataset_sintetico.csv
+    ├── X_train.csv
+    ├── X_test.csv
+    ├── y_train.csv
+    ├── y_test.csv
+    └── comparacion_churn.csv
 ```
 
 El archivo `config.yaml` se genera localmente a partir de `config.example.yaml` y está excluido del repositorio mediante `.gitignore`.
 
-## 4. Dataset utilizado
+## 4. Configuración del proyecto
 
-Se utiliza un conjunto de datos sintéticos compuesto por 10 registros y tres variables:
+La configuración se administra mediante YAML para separar los parámetros del código fuente.
 
-- `edad`: edad de la persona.
-- `ingreso_mensual`: ingreso mensual registrado.
-- `scoring_credito`: puntuación crediticia.
+| Parámetro | Valor |
+|---|---|
+| Total de registros | 1,000 |
+| Localización Faker | `es_MX` |
+| Semilla aleatoria | 42 |
+| Porcentaje de entrenamiento | 80% |
+| Porcentaje de prueba | 20% |
+| Estratificación | Activada |
+| Codificación | One-Hot |
+| Probabilidad configurada de churn | 20% |
 
-El dataset contiene cuatro valores faltantes originales y dos valores atípicos:
+Se establecieron probabilidades de 50% para Soltero, 40% para Casado y 10% para Divorciado.
 
-- Edad de `120` años.
-- Ingreso mensual de `$950,000`.
+Los ingresos anuales se generan aleatoriamente dentro del intervalo de $100,000 a $1,000,000.
 
-Estos datos permiten demostrar las etapas de detección, tratamiento e imputación.
+## 5. Generación del dataset sintético
 
-## 5. Metodología
+Se utilizó Faker con localización `es_MX` para generar información ficticia de clientes.
 
-### 5.1 Identificación de valores faltantes
+El dataset contiene ocho columnas:
 
-Se utiliza `isna().sum()` para contar los valores ausentes en cada columna.
+| Columna | Descripción |
+|---|---|
+| `id_cliente` | Identificador consecutivo |
+| `nombre` | Nombre ficticio |
+| `email` | Correo electrónico ficticio |
+| `telefono` | Número telefónico ficticio |
+| `direccion` | Dirección ficticia |
+| `estado_civil` | Estado civil generado aleatoriamente |
+| `ingreso_anual` | Ingreso anual sintético |
+| `churn` | Variable objetivo binaria |
 
-Resultado inicial:
+La variable `churn` representa:
 
-| Variable | Valores faltantes |
-|---|---:|
-| edad | 2 |
-| ingreso_mensual | 2 |
-| scoring_credito | 0 |
-| **Total** | **4** |
+- `0`: el cliente no abandona el servicio.
+- `1`: el cliente abandona el servicio.
 
-### 5.2 Detección de valores atípicos mediante IQR
+Se generaron correctamente **1,000 registros y 8 columnas**, sin valores faltantes.
 
-El rango intercuartílico se calcula mediante:
+## 6. Distribución original de churn
 
-**IQR = Q3 - Q1**
+Se configuró una probabilidad de abandono del 20%.
 
-Los límites de detección son:
+La distribución observada en la ejecución fue:
 
-- Límite inferior = Q1 - 1.5 × IQR
-- Límite superior = Q3 + 1.5 × IQR
-
-Resultados obtenidos:
-
-| Variable | Q1 | Q3 | IQR | Límite superior |
-|---|---:|---:|---:|---:|
-| edad | 27.25 | 41.25 | 14.00 | 62.25 |
-| ingreso_mensual | 17,250 | 22,750 | 5,500 | 31,000 |
-
-Se identificaron dos valores atípicos, que fueron reemplazados temporalmente por `NaN` para permitir su imputación.
-
-Después de esta etapa, el conjunto de datos contenía seis valores faltantes.
-
-### 5.3 Imputación mediante KNN
-
-Se utiliza `KNNImputer` de Scikit-learn con `n_neighbors=2`.
-
-Antes de la imputación, los datos se estandarizan mediante `StandardScaler` para reducir las diferencias de escala entre variables.
-
-KNN estima los valores faltantes considerando los registros más cercanos según las características disponibles.
-
-Ejemplos de resultados:
-
-| Registro | Variable | Valor original | Valor imputado |
-|---|---|---:|---:|
-| 2 | edad | NaN | 35.0 |
-| 3 | ingreso_mensual | NaN | 21,500 |
-| 5 | edad | 120 | 42.5 |
-| 5 | ingreso_mensual | 950,000 | 20,000 |
-| 8 | edad | NaN | 26.5 |
-| 9 | ingreso_mensual | NaN | 21,500 |
-
-Al finalizar la imputación, no quedaron valores faltantes.
-
-### 5.4 Comparación con media y mediana
-
-Además de KNN, se aplican métodos estadísticos simples para comparar las estimaciones.
-
-Por ejemplo, para el ingreso mensual del registro 5:
-
-| Método | Valor estimado |
-|---|---:|
-| KNN (k=2) | $20,000.00 |
-| Media | $18,857.14 |
-| Mediana | $19,000.00 |
-
-La media y la mediana producen valores generales para cada columna, mientras que KNN considera la similitud entre registros.
-
-No obstante, las estimaciones KNN dependen de las variables disponibles, su escala y el número de vecinos utilizado.
-
-### 5.5 Experimentación con diferentes valores de k
-
-Se compararon los resultados utilizando `k=2`, `k=3` y `k=5`.
-
-Para el registro 5:
-
-| k | Edad imputada | Ingreso imputado |
+| Churn | Cantidad | Porcentaje |
 |---|---:|---:|
-| 2 | 42.50 | $20,000.00 |
-| 3 | 38.33 | $21,666.67 |
-| 5 | 35.00 | $20,200.00 |
+| 0 | 808 | 80.80% |
+| 1 | 192 | 19.20% |
+| **Total** | **1,000** | **100%** |
 
-Los resultados muestran que modificar el número de vecinos influye en los valores estimados.
+La proporción obtenida es cercana al 20% esperado. No es exactamente igual porque la variable se genera mediante muestreo aleatorio.
 
-No se puede determinar cuál valor de `k` es más preciso únicamente con esta comparación, ya que no se dispone de los valores reales faltantes.
+## 7. Separación de características y variable objetivo
 
-## 6. Visualización de resultados
+Se separaron las variables predictoras (`X`) de la variable objetivo (`y`).
 
-Se generan dos gráficos de caja para comparar las distribuciones antes y después del proceso de limpieza.
+Las características utilizadas fueron:
 
-### Comparación de edades
+- `estado_civil`
+- `ingreso_anual`
 
-![Comparación de edades](graficos/comparacion_edad.png)
+La variable objetivo fue `churn`.
 
-### Comparación de ingresos mensuales
+Los identificadores y los campos de nombre, correo, teléfono y dirección no se utilizaron como variables predictoras.
 
-![Comparación de ingresos mensuales](graficos/comparacion_ingreso_mensual.png)
+Dimensiones obtenidas:
 
-Los gráficos permiten visualizar la presencia inicial de valores extremos y los cambios posteriores a la limpieza.
+| Conjunto | Dimensiones |
+|---|---|
+| X | (1000, 2) |
+| y | (1000,) |
 
-## 7. Instalación y ejecución
+## 8. Partición estratificada Train-Test
+
+Se utilizó la función `train_test_split` de Scikit-learn.
+
+```python
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.20,
+    random_state=42,
+    stratify=y
+)
+```
+
+El argumento `stratify=y` permite conservar aproximadamente la proporción de clases de `churn` en los conjuntos de entrenamiento y prueba.
+
+### Resultados de la partición
+
+| Conjunto | Registros | Porcentaje |
+|---|---:|---:|
+| Entrenamiento | 800 | 80% |
+| Prueba | 200 | 20% |
+| **Total** | **1,000** | **100%** |
+
+### Comparación de distribuciones
+
+| Conjunto | Registros | Churn 0 | Churn 1 |
+|---|---:|---:|---:|
+| Dataset completo | 1,000 | 80.80% | 19.20% |
+| Entrenamiento | 800 | 80.75% | 19.25% |
+| Prueba | 200 | 81.00% | 19.00% |
+
+Las proporciones muestran diferencias mínimas entre los tres conjuntos.
+
+Esto confirma que la estratificación conservó aproximadamente la distribución original de la variable objetivo.
+
+## 9. Codificación de variables categóricas
+
+Se aplicó One-Hot Encoding a la variable `estado_civil` utilizando `pd.get_dummies()`.
+
+La variable categórica se transformó en tres columnas:
+
+```text
+estado_civil_Casado
+estado_civil_Divorciado
+estado_civil_Soltero
+```
+
+Las columnas finales fueron:
+
+```text
+ingreso_anual
+estado_civil_Casado
+estado_civil_Divorciado
+estado_civil_Soltero
+```
+
+Cada categoría se representa mediante valores binarios `0` y `1`.
+
+Se verificó que los conjuntos de entrenamiento y prueba conservaran las mismas columnas después de la codificación.
+
+## 10. Validaciones realizadas
+
+El programa incluye verificaciones automáticas para confirmar la integridad de los resultados.
+
+| Validación | Resultado |
+|---|---|
+| Generación de 1,000 registros | Correcto |
+| Conservación de registros en la partición | Correcto |
+| Ausencia de índices compartidos entre Train y Test | Correcto |
+| Coincidencia de columnas codificadas | Correcto |
+| Variables predictoras numéricas | Correcto |
+| Ausencia de valores faltantes | Correcto |
+
+Todas las validaciones finalizaron satisfactoriamente.
+
+## 11. Archivos generados
+
+El programa exporta seis archivos CSV:
+
+| Archivo | Contenido |
+|---|---|
+| `dataset_sintetico.csv` | Dataset original de 1,000 clientes |
+| `X_train.csv` | Características codificadas de entrenamiento |
+| `X_test.csv` | Características codificadas de prueba |
+| `y_train.csv` | Variable objetivo de entrenamiento |
+| `y_test.csv` | Variable objetivo de prueba |
+| `comparacion_churn.csv` | Comparación de proporciones de churn |
+
+Los archivos se guardan en el directorio `resultados/`.
+
+Todos los registros son sintéticos y no corresponden a clientes reales.
+
+## 12. Instalación y ejecución
 
 ### Clonar el repositorio
 
 ```bash
-git clone https://github.com/Glass11114/practice_three_aws.git
-cd practice_three_aws
+git clone https://github.com/Glass11114/practice_four_aws.git
+cd practice_four_aws
 ```
 
-### Crear un entorno virtual
+### Crear y activar un entorno virtual
 
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 ```
 
-### Instalar dependencias
+### Instalar las dependencias
 
 ```bash
 python3 -m pip install -r requirements.txt
 ```
 
-### Crear la configuración local
+### Preparar la configuración
 
 ```bash
 cp config.example.yaml config.yaml
@@ -195,45 +255,55 @@ cp config.example.yaml config.yaml
 ### Ejecutar el programa
 
 ```bash
-python3 practica3.py
+python3 practica4.py
 ```
 
-### Consultar los gráficos
+### Verificar los archivos exportados
 
 ```bash
-ls -lh graficos/
+ls -lh resultados/
 ```
 
-## 8. Resultados obtenidos
+## 13. Análisis técnico
 
-| Indicador | Resultado |
-|---|---:|
-| Registros originales | 10 |
-| Registros finales | 10 |
-| Valores faltantes iniciales | 4 |
-| Valores atípicos detectados | 2 |
-| Valores faltantes después de IQR | 6 |
-| Valores faltantes después de KNN | 0 |
-| Valores de k evaluados | 2, 3 y 5 |
-| Gráficos generados | 2 |
+### ¿Por qué utilizar estratificación?
 
-Las validaciones confirmaron que se conservaron los diez registros, no quedaron valores faltantes y los resultados numéricos fueron finitos.
+La estratificación es importante cuando las clases no están distribuidas de manera uniforme.
 
-## 9. Limitaciones
+En este ejercicio, aproximadamente el 80% de los clientes pertenece a la clase `0` y el 20% a la clase `1`.
 
-- El dataset contiene únicamente diez registros.
-- Los valores imputados son estimaciones, no valores reales observados.
-- El resultado de KNN depende del número de vecinos y de las variables utilizadas.
-- La estandarización influye en el cálculo de distancias.
-- El método IQR puede identificar como atípicos valores que sean válidos en otros contextos.
-- La imputación puede producir edades decimales, que deben interpretarse como estimaciones numéricas.
+Una partición aleatoria sin estratificación podría producir proporciones diferentes entre entrenamiento y prueba.
 
-## 10. Conclusión
+Mediante `stratify=y`, se busca conservar una representación similar de ambas clases.
 
-La práctica permitió implementar un proceso de limpieza de datos utilizando Python y bibliotecas de análisis de datos.
+### ¿Por qué utilizar semillas aleatorias?
 
-Mediante IQR fue posible identificar dos valores atípicos y tratarlos como valores faltantes. Posteriormente, KNN permitió estimar los datos ausentes sin eliminar registros.
+Las semillas permiten reproducir los resultados cuando se utiliza la misma configuración y un entorno compatible.
 
-La comparación con media y mediana, así como la experimentación con diferentes valores de `k`, permitió observar cómo la selección del método afecta los resultados.
+Esto facilita la depuración, la comparación de resultados y la documentación del proceso.
 
-Finalmente, los gráficos y las validaciones facilitaron la revisión del proceso, demostrando la importancia de preparar los datos antes de utilizarlos en análisis estadísticos o modelos de aprendizaje automático.
+### ¿Por qué utilizar One-Hot Encoding?
+
+Los algoritmos de aprendizaje automático suelen requerir características numéricas.
+
+One-Hot Encoding transforma las categorías en indicadores binarios sin asignarles un orden artificial.
+
+### Limitaciones del ejercicio
+
+- Los registros son ficticios y no representan una población real.
+- La variable `churn` se genera aleatoriamente, sin depender del ingreso ni del estado civil.
+- La estratificación conserva proporciones de clases, pero no garantiza por sí sola un modelo predictivo preciso.
+- Los resultados dependen de la configuración y de las semillas utilizadas.
+- El ejercicio prepara los conjuntos de datos, pero no entrena un modelo de clasificación.
+
+## 14. Conclusión
+
+La práctica permitió implementar un proceso reproducible de generación y preparación de datos sintéticos utilizando Python, Faker, NumPy, Pandas y Scikit-learn.
+
+Se generaron 1,000 registros de clientes ficticios y se realizó una partición estratificada de 800 registros para entrenamiento y 200 para prueba.
+
+La proporción original de abandono fue del 19.20%, mientras que los conjuntos de entrenamiento y prueba conservaron porcentajes de 19.25% y 19.00%, respectivamente.
+
+También se codificó la variable categórica `estado_civil` y se validó la integridad de los conjuntos resultantes.
+
+En conclusión, la práctica demuestra la importancia de la generación reproducible de datos, la correcta separación de variables y la estratificación como etapas de preparación para proyectos de aprendizaje automático.
