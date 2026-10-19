@@ -1,0 +1,5 @@
+Faker
+pandas
+numpy
+scikit-learn
+PyYAML

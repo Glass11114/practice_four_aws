@@ -1,0 +1,34 @@
+# ==========================================
+# PRÁCTICA 4: GENERACIÓN DE DATOS SINTÉTICOS
+# ==========================================
+
+dataset:
+  total_registros: 1000
+  idioma: "es_MX"
+  semilla: 42
+
+  # Distribución del estado civil
+  estados_civiles:
+    Soltero: 0.5
+    Casado: 0.4
+    Divorciado: 0.1
+
+  # Probabilidades de abandono
+  churn:
+    no_abandona: 0.8
+    abandona: 0.2
+
+  ingreso_anual:
+    minimo: 100000
+    maximo: 1000000
+
+particion:
+  porcentaje_prueba: 0.20
+  estratificada: true
+
+codificacion:
+  metodo: "one_hot"
+
+resultados:
+  directorio: "resultados"
+  guardar_csv: true
